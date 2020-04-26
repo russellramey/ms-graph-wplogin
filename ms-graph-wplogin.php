@@ -74,6 +74,57 @@ class MSGWPLAuthUser
         }
     }
 
+    /**
+     *
+     * Redirect WP Login
+     * Main login url redirect function
+     * @return null
+     *
+    **/
+    private function MSGWPL_LoginRedirect()
+    {
+
+    }
+
+    /**
+     *
+     * Request user token
+     * Make a request to MS Graph to request user access token
+     * @param String - $code
+     * @param Array - $config
+     * @return Object - $data
+     *
+    **/
+    private function MSGWPL_RequestUserToken($code, $config)
+    {
+
+    }
+
+    /**
+     *
+     * Authenticate User with access token
+     * Make a request to MS Graph with returned Access Token to validate user
+     * @param String - $token
+     * @return Object - $data
+     *
+    **/
+    private function MSGWPL_AuthenticateUser($token)
+    {
+
+    }
+
+    /**
+     *
+     * Logout User
+     * Logout user of Wordpress, clear cookies
+     * @return null
+     *
+    **/
+    private function MSGWPL_LogoutUser()
+    {
+
+    }
+
 }
 
 /**
