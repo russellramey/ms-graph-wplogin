@@ -35,6 +35,45 @@ class MSGWPLAuthUser
     **/
     protected $valid_config = true;
 
+    /**
+     *
+     * Class constructor
+     *
+    **/
+    public function __construct()
+    {
+        // Check for Tennent ID
+        if(defined('MSGWPL_TENNENT_ID')){
+            $this->config['tennent_id'] = MSGWPL_TENNENT_ID;
+        }
+        // Check for Client ID
+        if(defined('MSGWPL_CLIENT_ID')){
+            $this->config['client_id'] = MSGWPL_CLIENT_ID;
+        }
+        // Check for Client Secret
+        if(defined('MSGWPL_CLIENT_SECRET')){
+            $this->config['client_secret'] = MSGWPL_CLIENT_SECRET;
+        }
+        // Check for Graph Scopes
+        if(defined('MSGWPL_CLIENT_SCOPES')){
+            $this->config['scopes'] = MSGWPL_CLIENT_SCOPES;
+        }
+
+        // Check each value in $config array
+        foreach($this->config as $key => $value){
+            // If value is null or empty
+            if(!$value || empty($value)){
+                // set $defined_config to false
+                $this->valid_config = false;
+            }
+        }
+
+        // If $definded_config is validated
+        if($this->valid_config){
+            // Add action to wp login redirect
+        }
+    }
+
 }
 
 /**
