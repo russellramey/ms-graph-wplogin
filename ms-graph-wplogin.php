@@ -97,7 +97,32 @@ class MSGWPLAuthUser
     **/
     private function MSGWPL_RequestUserToken($code, $config)
     {
+        // Get wordpress login url, assign to $config array
+        $wp_login_url = rtrim(wp_login_url(), '/');
 
+        // Build API Token Url
+        $url = "https://login.microsoftonline.com/" . $this->config['tennent_id'] . "/oauth2/v2.0/token";
+        $fields = 'client_id=' . $this->config['client_id'] . '&client_secret=' . $this->config['client_secret'] . '&scope=' . $this->config['scopes'] . '&grant_type=authorization_code' . '&code=' . $code . '&redirect_uri=' . $wp_login_url;
+
+        // cURL Initiate
+        $ch = curl_init();
+
+        // cURL Settings
+        curl_setopt($ch,CURLOPT_URL, $url);
+        curl_setopt($ch,CURLOPT_HTTPHEADER, array("Content-Type: application/x-www-form-urlencoded"));
+        curl_setopt($ch,CURLOPT_POST, 1);
+        curl_setopt($ch,CURLOPT_POSTFIELDS, $fields);
+        curl_setopt($ch,CURLOPT_RETURNTRANSFER,1);
+
+        // cURL Execute
+        $data = curl_exec($ch);
+        $data = json_decode($data);
+
+        // cURL Close
+        curl_close($ch);
+
+        // Return response data
+        return $data;
     }
 
     /**
@@ -110,7 +135,23 @@ class MSGWPLAuthUser
     **/
     private function MSGWPL_AuthenticateUser($token)
     {
+        // cURL Initiate
+        $ch = curl_init();
 
+        // cURL Settings
+        curl_setopt($ch,CURLOPT_URL, "https://graph.microsoft.com/v1.0/me");
+        curl_setopt($ch,CURLOPT_HTTPHEADER, array("Authorization: bearer " . $token, "Host: graph.microsoft.com"));
+        curl_setopt($ch,CURLOPT_RETURNTRANSFER,1);
+
+        // cURL Execute
+        $data = curl_exec($ch);
+        $data = json_decode($data);
+
+        // cURL Close
+        curl_close($ch);
+
+        // Return response data
+        return $data;
     }
 
     /**
@@ -122,7 +163,24 @@ class MSGWPLAuthUser
     **/
     private function MSGWPL_LogoutUser()
     {
+        // Watch for default WP logout url
+        if(isset($_GET["loggedout"]) && $_GET["loggedout"] === "true") {
 
+            // Clear WP cookies
+            wp_clear_auth_cookie();
+
+            // Clear SSO cookies
+            // COOKIEPATH & COOKIE_DOMAIN are default Wordpress constants
+            setcookie('msgwpl_access_token', null, time()-300, COOKIEPATH, COOKIE_DOMAIN);
+            setcookie('msgwpl_refresh_token', null, time()-300, COOKIEPATH, COOKIE_DOMAIN);
+
+            // Redirect user to home page
+            header('Location: ' . home_url());
+
+            // Exit
+            exit();
+
+        }
     }
 
 }
