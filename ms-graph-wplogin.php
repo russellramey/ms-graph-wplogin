@@ -6,3 +6,15 @@
 * Author: Russell Ramey
 * Author URI: https://russellramey.dev/
 ***/
+
+class MSGWPLAuthUser
+{
+
+}
+
+/**
+ *
+ * Create new MSGWPLAuthUser instance
+ *
+**/
+new MSGWPLAuthUser();
