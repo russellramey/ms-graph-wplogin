@@ -71,6 +71,10 @@ class MSGWPLAuthUser
         // If $definded_config is validated
         if($this->valid_config){
             // Add action to wp login redirect
+            add_action( 'login_redirect', function(){
+                // Call private function directly
+                $this->MSGWPL_LoginRedirect();
+            });
         }
     }
 
@@ -84,6 +88,103 @@ class MSGWPLAuthUser
     private function MSGWPL_LoginRedirect()
     {
 
+        // Watch for logout action
+        $this->MSGWPL_LogoutUser();
+
+        // If user is already authenticated, verify with Graph and WP
+        if(is_user_logged_in() && isset($_COOKIE['msgwpl_access_token'])) {
+
+            // Authenticate users access token with MS Graph
+            $user = MSGWPL_AuthenticateUser($_COOKIE['msgwpl_access_token']);
+            // Get current WP user object
+            $wp_user = wp_get_current_user();
+
+            // If Graph user email is equal to WP user email
+            if (strtolower($user->mail) === strtolower($wp_user->user_email)) {
+
+                // Redirect to WP Dashboard
+                header('Location: ' . get_dashboard_url());
+
+            } else {
+
+                // WP error
+                wp_die( __( 'Sorry, you are not allowed to access this part of the site.' ) );
+
+            }
+
+        // If user is not authenticated
+        } else {
+
+            // Get wordpress login url, assign to $config array
+            $wp_login_url = rtrim(wp_login_url(), '/');
+
+            // Get Auth Code from MS API
+            if(isset($_GET["code"])) {
+
+                // Request user access token
+                $request = $this->MSGWPL_RequestUserToken($_GET["code"], $this->config);
+
+                // If result has Access Token
+                if ($request->access_token) {
+
+                    // Save access and refresh tokens as COOKIES
+                    // COOKIEPATH & COOKIE_DOMAIN are default Wordpress constants
+                    setcookie('msgwpl_access_token', $request->access_token, time() + 3600, COOKIEPATH, COOKIE_DOMAIN);
+                    setcookie('msgwpl_refresh_token', $request->refresh_token, time() + 3600, COOKIEPATH, COOKIE_DOMAIN);
+
+                    // Authenticate users access token
+                    $user = $this->MSGWPL_AuthenticateUser($request->access_token);
+                    if (isset($user->id) && isset($user->mail)) {
+
+                        // Get WP user by Email (provided by $user object from Graph)
+                        $wp_user = get_user_by( 'email', $user->mail );
+
+                        // If user is found
+                        if($wp_user){
+
+                            // If user is WP administrator or editor
+                            if(in_array('administrator', $wp_user->roles) || in_array('editor', $wp_user->roles)) {
+
+                                // Clear WP cookies
+                                wp_clear_auth_cookie();
+                                // Set current user
+                                wp_set_current_user( $wp_user->ID, $wp_user->user_login );
+                                // Set WP auth cookie
+                                wp_set_auth_cookie( $wp_user->ID );
+                                // Sign in
+                                do_action( 'wp_login', $wp_user->user_login );
+
+                                // Redirect to WP Dashboard
+                                header('Location: ' . get_dashboard_url());
+
+                            } else {
+
+                                // WP error
+                                wp_die( __( 'Sorry, you are not allowed to access this part of the site.' ) );
+
+                            }
+
+                        } else {
+
+                            // WP error
+                            wp_die( __( 'Sorry, you are not allowed to access this part of the site.' ) );
+
+                        }
+
+                    }
+
+                }
+
+            } else {
+
+                // Redirect to MS login
+                header("Location: https://login.microsoftonline.com/" . $this->config['tennent_id'] . "/oauth2/v2.0/authorize?client_id=" . $this->config['client_id'] . "&scope=" . $this->config['scopes'] . "&resource_mode=query&response_type=code&redirect_uri=" . $wp_login_url);
+
+            }
+        }
+
+        // Exit
+        exit();
     }
 
     /**
