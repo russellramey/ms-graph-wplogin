@@ -95,7 +95,7 @@ class MSGWPLAuthUser
         if(is_user_logged_in() && isset($_COOKIE['msgwpl_access_token'])) {
 
             // Authenticate users access token with MS Graph
-            $user = MSGWPL_AuthenticateUser($_COOKIE['msgwpl_access_token']);
+            $user = $this->MSGWPL_AuthenticateUser($_COOKIE['msgwpl_access_token']);
             // Get current WP user object
             $wp_user = wp_get_current_user();
 
