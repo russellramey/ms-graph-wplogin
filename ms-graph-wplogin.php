@@ -5,6 +5,7 @@
 * Version: 1.0
 * Author: Russell Ramey
 * Author URI: https://russellramey.dev/
+* API Docs: https://docs.microsoft.com/en-us/graph/auth/
 ***/
 
 class MSGWPLAuthUser
@@ -68,20 +69,28 @@ class MSGWPLAuthUser
             }
         }
 
-        // If $definded_config is validated
+        // If $config is valid
         if($this->valid_config){
-            // Add action to wp login redirect
+            // Add action to redirect wp login url
             add_action( 'login_redirect', function(){
                 // Call private function directly
                 $this->MSGWPL_LoginRedirect();
             });
+            // // Add action to all wp-admin requests, validate current user
+            // add_action( 'admin_init', function(){
+            //     // Validate existing user
+            //     if(!$this->MSGWPL_AuthenticateUser()){
+            //         // WP error
+            //         wp_die( __( 'Sorry, you are not allowed to access this part of the site. Please <a href="' . wp_login_url() . '">login</a> to continue.' ) );
+            //     };
+            // });
         }
     }
 
     /**
      *
      * Redirect WP Login
-     * Main login url redirect function
+     * Main login url redirect
      * @return null
      *
     **/
@@ -91,26 +100,11 @@ class MSGWPLAuthUser
         // Watch for logout action
         $this->MSGWPL_LogoutUser();
 
-        // If user is already authenticated, verify with Graph and WP
-        if(is_user_logged_in() && isset($_COOKIE['msgwpl_access_token'])) {
+        // If user is already authenticated
+        if($this->MSGWPL_AuthenticateUser()) {
 
-            // Authenticate users access token with MS Graph
-            $user = $this->MSGWPL_AuthenticateUser($_COOKIE['msgwpl_access_token']);
-            // Get current WP user object
-            $wp_user = wp_get_current_user();
-
-            // If Graph user email is equal to WP user email
-            if (strtolower($user->mail) === strtolower($wp_user->user_email)) {
-
-                // Redirect to WP Dashboard
-                header('Location: ' . get_dashboard_url());
-
-            } else {
-
-                // WP error
-                wp_die( __( 'Sorry, you are not allowed to access this part of the site.' ) );
-
-            }
+            // Redirect to WP Dashboard
+            header('Location: ' . get_dashboard_url());
 
         // If user is not authenticated
         } else {
@@ -133,26 +127,25 @@ class MSGWPLAuthUser
                     setcookie('msgwpl_refresh_token', $request->refresh_token, time() + 3600, COOKIEPATH, COOKIE_DOMAIN);
 
                     // Authenticate users access token
-                    $user = $this->MSGWPL_AuthenticateUser($request->access_token);
+                    $user = $this->MSGWPL_RequestUserProfile($request->access_token);
+                    // If $user exists
                     if (isset($user->id) && isset($user->mail)) {
 
-                        // Get WP user by Email (provided by $user object from Graph)
+                        // Get WP user by Email (provided by $user object from MS Graph)
                         $wp_user = get_user_by( 'email', $user->mail );
 
                         // If user is found
                         if($wp_user){
 
-                            // If user is WP administrator or editor
+                            // If user is WP administrator or editor only
                             if(in_array('administrator', $wp_user->roles) || in_array('editor', $wp_user->roles)) {
 
-                                // Clear WP cookies
+                                // Clear WP auth cookies
                                 wp_clear_auth_cookie();
-                                // Set current user
+                                // Set current auth user
                                 wp_set_current_user( $wp_user->ID, $wp_user->user_login );
-                                // Set WP auth cookie
+                                // Set WP auth cookies
                                 wp_set_auth_cookie( $wp_user->ID );
-                                // Sign in
-                                do_action( 'wp_login', $wp_user->user_login );
 
                                 // Redirect to WP Dashboard
                                 header('Location: ' . get_dashboard_url());
@@ -185,6 +178,40 @@ class MSGWPLAuthUser
 
         // Exit
         exit();
+    }
+
+    /**
+     *
+     * Authenticate Current User
+     * Verify that current WP User and current MS Graph user are the same
+     * @return Boolean
+     *
+    **/
+    private function MSGWPL_AuthenticateUser()
+    {
+        // Authenticatied boolean
+        $isAuthenticated = false;
+
+        // If user is already authenticated, verify cookie with MS Graph and WP
+        if(is_user_logged_in() && isset($_COOKIE['msgwpl_access_token'])) {
+
+            // Authenticate users access token with MS Graph
+            $user = $this->MSGWPL_RequestUserProfile($_COOKIE['msgwpl_access_token']);
+            // Get current WP user object
+            $wp_user = wp_get_current_user();
+
+            // If Graph user email is not equal to current WP user email
+            if ($wp_user && (strtolower($user->mail) === strtolower($wp_user->user_email))) {
+
+                // Return true
+                $isAuthenticated = true;
+
+            } 
+
+        }
+
+        // Return
+        return $isAuthenticated;
     }
 
     /**
@@ -229,12 +256,12 @@ class MSGWPLAuthUser
     /**
      *
      * Authenticate User with access token
-     * Make a request to MS Graph with returned Access Token to validate user
+     * Make a request to MS Graph to request user profile
      * @param String - $token
      * @return Object - $data
      *
     **/
-    private function MSGWPL_AuthenticateUser($token)
+    private function MSGWPL_RequestUserProfile($token)
     {
         // cURL Initiate
         $ch = curl_init();
