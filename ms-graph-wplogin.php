@@ -71,19 +71,16 @@ class MSGWPLAuthUser
 
         // If $config is valid
         if($this->valid_config){
-            // Add action to redirect wp login url
+            // Add action to redirect wp_login_url
             add_action( 'login_redirect', function(){
                 // Call private function directly
                 $this->MSGWPL_LoginRedirect();
             });
-            // // Add action to all wp-admin requests, validate current user
-            // add_action( 'admin_init', function(){
-            //     // Validate existing user
-            //     if(!$this->MSGWPL_AuthenticateUser()){
-            //         // WP error
-            //         wp_die( __( 'Sorry, you are not allowed to access this part of the site. Please <a href="' . wp_login_url() . '">login</a> to continue.' ) );
-            //     };
-            // });
+            // Add action to redirect wp_lostpassword_url
+            add_action( 'lostpassword_redirect', function(){
+                // Die, with error
+                wp_die('This action is not allowed.');
+            });
         }
     }
 
