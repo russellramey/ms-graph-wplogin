@@ -116,7 +116,7 @@ class MSGWPLAuthUser
                 $request = $this->MSGWPL_RequestUserToken($_GET["code"], $this->config);
 
                 // If result has Access Token
-                if ($request->access_token) {
+                if (isset($request->access_token)) {
 
                     // Save access and refresh tokens as COOKIES
                     // COOKIEPATH & COOKIE_DOMAIN are default Wordpress constants
@@ -163,6 +163,11 @@ class MSGWPLAuthUser
 
                     }
 
+                } else {
+
+                    // WP error
+                    wp_die( __( 'Sorry, you are not allowed to access this part of the site.' ) );
+                    
                 }
 
             } else {
