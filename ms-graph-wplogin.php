@@ -350,13 +350,26 @@ class MSGWPLAuthUser
             // Clear WP cookies
             wp_clear_auth_cookie();
 
-            // Clear MSGWPL cookies
-            // COOKIEPATH & COOKIE_DOMAIN are default Wordpress constants
-            setcookie('msgwpl_access_token', null, time()-300, COOKIEPATH, COOKIE_DOMAIN);
-            setcookie('msgwpl_refresh_token', null, time()-300, COOKIEPATH, COOKIE_DOMAIN);
+            // If MSGWPL cookies exists
+            if(isset($_COOKIE['msgwpl_access_token']) || isset($_COOKIE['msgwpl_refresh_token'])){
 
-            // Redirect user to home page
-            header('Location: ' . home_url());
+                // Clear MSGWPL cookies
+                // COOKIEPATH & COOKIE_DOMAIN are default Wordpress constants
+                setcookie('msgwpl_access_token', null, time()-300, COOKIEPATH, COOKIE_DOMAIN);
+                setcookie('msgwpl_refresh_token', null, time()-300, COOKIEPATH, COOKIE_DOMAIN);
+
+                // Microsoft logout url 
+                $msg_logout = 'https://login.microsoftonline.com/' . $this->config['tennent_id'] . '/oauth2/logout?post_logout_redirect_uri=' . get_bloginfo('url');
+
+                // WP error with user message and Microsoft Logout link
+                wp_die( __( '<p>You have successfully logged out of: ' . get_bloginfo('url') . '.</p><p><b>Would you also like to logout out of your Microsoft Profile?</b><br><span style="font-size:94%;font-style:italic">(Recommended if you are using a public or shared access computer)</span></p>'), 'Logout', ['link_url'=>$msg_logout, 'link_text'=>'Yes, log out of Microsoft', 'response'=>200] );
+
+            } else {
+
+                // Redirect to home
+                header('Location: ' . get_home_url());
+
+            }
 
             // Exit
             exit();
