@@ -113,15 +113,15 @@ class MSGWPLAuthUser
             if(isset($_GET["code"])) {
 
                 // Request user access token
-                $request = $this->MSGWPL_RequestUserToken($_GET["code"], $this->config);
+                $request = $this->MSGWPL_RequestUserToken($_GET["code"], 'authorization_code');
 
                 // If result has Access Token
                 if (isset($request->access_token)) {
 
                     // Save access and refresh tokens as COOKIES
                     // COOKIEPATH & COOKIE_DOMAIN are default Wordpress constants
-                    setcookie('msgwpl_access_token', $request->access_token, time() + 3600, COOKIEPATH, COOKIE_DOMAIN);
-                    setcookie('msgwpl_refresh_token', $request->refresh_token, time() + 3600, COOKIEPATH, COOKIE_DOMAIN);
+                    setcookie('msgwpl_access_token', $request->access_token, time() + 3600, COOKIEPATH, COOKIE_DOMAIN); // Expire 1 Day
+                    setcookie('msgwpl_refresh_token', $request->refresh_token, time() + 259200, COOKIEPATH, COOKIE_DOMAIN); // Expire 3 Days
 
                     // Authenticate users access token
                     $user = $this->MSGWPL_RequestUserProfile($request->access_token);
@@ -225,14 +225,28 @@ class MSGWPLAuthUser
      * @return Object - $data
      *
     **/
-    private function MSGWPL_RequestUserToken($code, $config)
+    private function MSGWPL_RequestUserToken($auth_code, $auth_type)
     {
         // Get wordpress login url, assign to $config array
         $wp_login_url = rtrim(wp_login_url(), '/');
 
         // Build API Token Url
         $url = "https://login.microsoftonline.com/" . $this->config['tennent_id'] . "/oauth2/v2.0/token";
-        $fields = 'client_id=' . $this->config['client_id'] . '&client_secret=' . $this->config['client_secret'] . '&scope=' . $this->config['scopes'] . '&grant_type=authorization_code' . '&code=' . $code . '&redirect_uri=' . $wp_login_url;
+        // Parameter fields
+        // $fields = 'client_id=' . $this->config['client_id'] . 
+        //           '&client_secret=' . $this->config['client_secret'] .
+        //           '&scope=' . $this->config['scopes'] .
+        //           '&redirect_uri=' . $wp_login_url . 
+        //           '&grant_type=' . isset($type) ? $type : 'authorization_code' . 
+        //           ($type === 'authorization_code') ? '&code=' . $code : '&refresh_token=' . $code;
+        $fields = [
+            'client_id=' . $this->config['client_id'], 
+            'client_secret=' . $this->config['client_secret'],
+            'scope=' . $this->config['scopes'],
+            'redirect_uri=' . $wp_login_url,
+            'grant_type=' . isset($auth_type) ? $auth_type : 'authorization_code',
+            (isset($auth_type) && $auth_type === 'authorization_code') ? 'code=' . $auth_code : 'refresh_token=' . $auth_code
+        ];
 
         // cURL Initiate
         $ch = curl_init();
@@ -241,7 +255,7 @@ class MSGWPLAuthUser
         curl_setopt($ch,CURLOPT_URL, $url);
         curl_setopt($ch,CURLOPT_HTTPHEADER, array("Content-Type: application/x-www-form-urlencoded"));
         curl_setopt($ch,CURLOPT_POST, 1);
-        curl_setopt($ch,CURLOPT_POSTFIELDS, $fields);
+        curl_setopt($ch,CURLOPT_POSTFIELDS, implode('&', $fields));
         curl_setopt($ch,CURLOPT_RETURNTRANSFER,1);
 
         // cURL Execute
