@@ -250,8 +250,8 @@ class MSGWPLAuthUser
         // Set MSGWPL access and refresh tokens as COOKIES
         // COOKIEPATH & COOKIE_DOMAIN are default Wordpress constants
         if($data->access_token && $data->refresh_token){
-            setcookie('msgwpl_access_token', $data->access_token, time() + 3600, COOKIEPATH, COOKIE_DOMAIN); // Expire 1 Day
-            setcookie('msgwpl_refresh_token', $data->refresh_token, time() + 259200, COOKIEPATH, COOKIE_DOMAIN); // Expire 3 Days
+            setcookie('msgwpl_access_token', $data->access_token, time() + 3600, '/', COOKIE_DOMAIN); // Expire 1 Day
+            setcookie('msgwpl_refresh_token', $data->refresh_token, time() + 259200, '/', COOKIE_DOMAIN); // Expire 3 Days
         }
 
         // Return response data
@@ -355,10 +355,10 @@ class MSGWPLAuthUser
 
                 // Clear MSGWPL cookies
                 // COOKIEPATH & COOKIE_DOMAIN are default Wordpress constants
-                setcookie('msgwpl_access_token', null, time()-300, COOKIEPATH, COOKIE_DOMAIN);
-                setcookie('msgwpl_refresh_token', null, time()-300, COOKIEPATH, COOKIE_DOMAIN);
+                setcookie('msgwpl_access_token', null, time()-300, '/', COOKIE_DOMAIN);
+                setcookie('msgwpl_refresh_token', null, time()-300, '/', COOKIE_DOMAIN);
 
-                // Microsoft logout url 
+                // Microsoft logout url
                 $msg_logout = 'https://login.microsoftonline.com/' . $this->config['tennent_id'] . '/oauth2/logout?post_logout_redirect_uri=' . get_bloginfo('url');
 
                 // WP error with user message and Microsoft Logout link
