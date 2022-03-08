@@ -250,8 +250,8 @@ class MSGWPLAuthUser
         // Set MSGWPL access and refresh tokens as COOKIES
         // COOKIEPATH & COOKIE_DOMAIN are default Wordpress constants
         if($data->access_token && $data->refresh_token){
-            setcookie('msgwpl_access_token', $data->access_token, time() + 3600, '/', COOKIE_DOMAIN); // Expire 1 Day
-            setcookie('msgwpl_refresh_token', $data->refresh_token, time() + 259200, '/', COOKIE_DOMAIN); // Expire 3 Days
+            setcookie('msgwpl_access_token', $data->access_token, time() + 3600, '/', COOKIE_DOMAIN, true, true); // Expire 1 Hour
+            setcookie('msgwpl_refresh_token', $data->refresh_token, time() + 259200, '/', COOKIE_DOMAIN, true, true); // Expire 3 Days
         }
 
         // Return response data
