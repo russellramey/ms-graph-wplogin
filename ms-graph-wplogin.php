@@ -26,6 +26,8 @@ class MSGWPLAuthUser
         'client_secret' => null,
         // Graph Scopes (default user profile, offline access)
         'scopes' => 'user.read+offline_access',
+        // Cookie name for tokens
+        'cookie_hash' => null
     ];
 
     /**
@@ -58,6 +60,10 @@ class MSGWPLAuthUser
         // Check for Graph Scopes
         if(defined('MSGWPL_CLIENT_SCOPES')){
             $this->config['scopes'] = MSGWPL_CLIENT_SCOPES;
+        }
+        // Check for Wordpress salt, generate hash string
+        if(defined('SECURE_AUTH_SALT')){
+            $this->config['cookie_hash'] = hash('sha256', SECURE_AUTH_SALT . get_bloginfo('url'));
         }
 
         // Check each value in $config array
@@ -102,12 +108,39 @@ class MSGWPLAuthUser
 
             // Redirect to WP Dashboard
             header('Location: ' . get_dashboard_url());
+        
+        } 
 
-        // If user is not authenticated
-        } else {
+        // If refresh_token cookie exists 
+        elseif(isset($_COOKIE['msgwpl_refresh_token_' . $this->config['cookie_hash']])) {
 
-            // Get wordpress login url, assign to $config array
-            $wp_login_url = rtrim(wp_login_url(), '/');
+            // Request user access token via Refresh_Token
+            $request = $this->MSGWPL_RequestUserToken($_COOKIE['msgwpl_refresh_token_' . $this->config['cookie_hash']], 'refresh_token');
+
+            // If request has Access Token
+            if ($request && isset($request->access_token)) {
+                // Authenticate users access token
+                $user = $this->MSGWPL_RequestUserProfile($request->access_token);
+
+                // If user exists
+                if (isset($user->id) && isset($user->mail)) {
+
+                    // Attempt to login User to WP
+                    $this->MSGWPL_LoginUser($user);
+
+                }
+            // If no access token
+            } else {
+
+                // Redirect to microsoft
+                $this->MSGWPL_SSORedirect();
+
+            }
+
+        }
+
+        // If user is not authenticated (default)
+        else {
 
             // Get Auth Code from MS API
             if(isset($_GET["code"])) {
@@ -139,7 +172,7 @@ class MSGWPLAuthUser
             } else {
 
                 // Redirect to MS login
-                header("Location: https://login.microsoftonline.com/" . $this->config['tennent_id'] . "/oauth2/v2.0/authorize?client_id=" . $this->config['client_id'] . "&scope=" . $this->config['scopes'] . "&resource_mode=query&response_type=code&redirect_uri=" . $wp_login_url);
+                $this->MSGWPL_SSORedirect();
 
             }
         }
@@ -167,14 +200,14 @@ class MSGWPLAuthUser
             $wp_user = wp_get_current_user();
 
             // If access token exists
-            if(isset($_COOKIE['msgwpl_access_token'])){
+            if(isset($_COOKIE['msgwpl_access_token_' . $this->config['cookie_hash']])){
                 // Authenticate users access token with MS Graph
-                $msg_user = $this->MSGWPL_RequestUserProfile($_COOKIE['msgwpl_access_token']);
+                $msg_user = $this->MSGWPL_RequestUserProfile($_COOKIE['msgwpl_access_token_' . $this->config['cookie_hash']]);
             }
             // Else if refresh token exits
-            else if(isset($_COOKIE['msgwpl_refresh_token'])){
+            elseif(isset($_COOKIE['msgwpl_refresh_token_' . $this->config['cookie_hash']])){
                 // Request user access token via Refresh_Token
-                $request = $this->MSGWPL_RequestUserToken($_COOKIE['msgwpl_refresh_token'], 'refresh_token');
+                $request = $this->MSGWPL_RequestUserToken($_COOKIE['msgwpl_refresh_token_' . $this->config['cookie_hash']], 'refresh_token');
 
                 // If request has Access Token
                 if (isset($request->access_token)) {
@@ -249,9 +282,9 @@ class MSGWPLAuthUser
 
         // Set MSGWPL access and refresh tokens as COOKIES
         // COOKIEPATH & COOKIE_DOMAIN are default Wordpress constants
-        if($data->access_token && $data->refresh_token){
-            setcookie('msgwpl_access_token', $data->access_token, time() + 3600, '/', COOKIE_DOMAIN, true, true); // Expire 1 Hour
-            setcookie('msgwpl_refresh_token', $data->refresh_token, time() + 259200, '/', COOKIE_DOMAIN, true, true); // Expire 3 Days
+        if(isset($data->access_token) && isset($data->refresh_token)){
+            setcookie('msgwpl_access_token_' . $this->config['cookie_hash'], $data->access_token, time() + 3600, '/', COOKIE_DOMAIN, true, true); // Expire 1 Hour
+            setcookie('msgwpl_refresh_token_' . $this->config['cookie_hash'], $data->refresh_token, time() + 259200, '/', COOKIE_DOMAIN, true, true); // Expire 3 Days
         }
 
         // Return response data
@@ -351,12 +384,12 @@ class MSGWPLAuthUser
             wp_clear_auth_cookie();
 
             // If MSGWPL cookies exists
-            if(isset($_COOKIE['msgwpl_access_token']) || isset($_COOKIE['msgwpl_refresh_token'])){
+            if(isset($_COOKIE['msgwpl_access_token_' . $this->config['cookie_hash']]) || isset($_COOKIE['msgwpl_refresh_token_' . $this->config['cookie_hash']])){
 
                 // Clear MSGWPL cookies
                 // COOKIEPATH & COOKIE_DOMAIN are default Wordpress constants
-                setcookie('msgwpl_access_token', null, time()-300, '/', COOKIE_DOMAIN);
-                setcookie('msgwpl_refresh_token', null, time()-300, '/', COOKIE_DOMAIN);
+                setcookie('msgwpl_access_token_' . $this->config['cookie_hash'], null, time()-300, '/', COOKIE_DOMAIN);
+                setcookie('msgwpl_refresh_token_' . $this->config['cookie_hash'], null, time()-300, '/', COOKIE_DOMAIN);
 
                 // Microsoft logout url
                 $msg_logout = 'https://login.microsoftonline.com/' . $this->config['tennent_id'] . '/oauth2/logout?post_logout_redirect_uri=' . get_bloginfo('url');
@@ -375,6 +408,21 @@ class MSGWPLAuthUser
             exit();
 
         }
+    }
+
+    /**
+     *
+     * Microsoft Redirect Link
+     * Redirect to Microsoft sso login page
+     * @return header
+     *
+    **/
+    private function MSGWPL_SSORedirect()
+    {
+        // Get wordpress login url, assign to $config array
+        $wp_login_url = rtrim(wp_login_url(), '/');
+        // Redirect to MS login
+        return header("Location: https://login.microsoftonline.com/" . $this->config['tennent_id'] . "/oauth2/v2.0/authorize?client_id=" . $this->config['client_id'] . "&scope=" . $this->config['scopes'] . "&resource_mode=query&response_type=code&redirect_uri=" . $wp_login_url);
     }
 
 }
