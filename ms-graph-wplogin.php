@@ -2,7 +2,7 @@
 /***
 * Plugin Name: MS Graph WP Login
 * Description: Enable Wordpress login via Microsoft Graph API using an enterprise Tennent ID and Active Directory.
-* Version: 1.0
+* Version: 2.0
 * Author: Russell Ramey
 * Author URI: https://russellramey.dev/
 * API Docs: https://docs.microsoft.com/en-us/graph/auth/
@@ -283,8 +283,8 @@ class MSGWPLAuthUser
         // Set MSGWPL access and refresh tokens as COOKIES
         // COOKIEPATH & COOKIE_DOMAIN are default Wordpress constants
         if(isset($data->access_token) && isset($data->refresh_token)){
-            setcookie('msgwpl_access_token_' . $this->config['cookie_hash'], $data->access_token, time() + 3600, '/', COOKIE_DOMAIN, true, true); // Expire 1 Hour
-            setcookie('msgwpl_refresh_token_' . $this->config['cookie_hash'], $data->refresh_token, time() + 259200, '/', COOKIE_DOMAIN, true, true); // Expire 3 Days
+            setcookie('msgwpl_access_token_' . $this->config['cookie_hash'], $data->access_token, time() + 3600, COOKIEPATH, COOKIE_DOMAIN, true, true); // Expire 1 Hour
+            setcookie('msgwpl_refresh_token_' . $this->config['cookie_hash'], $data->refresh_token, time() + 259200, COOKIEPATH, COOKIE_DOMAIN, true, true); // Expire 3 Days
         }
 
         // Return response data
@@ -388,8 +388,8 @@ class MSGWPLAuthUser
 
                 // Clear MSGWPL cookies
                 // COOKIEPATH & COOKIE_DOMAIN are default Wordpress constants
-                setcookie('msgwpl_access_token_' . $this->config['cookie_hash'], null, time()-300, '/', COOKIE_DOMAIN);
-                setcookie('msgwpl_refresh_token_' . $this->config['cookie_hash'], null, time()-300, '/', COOKIE_DOMAIN);
+                setcookie('msgwpl_access_token_' . $this->config['cookie_hash'], null, time()-300, COOKIEPATH, COOKIE_DOMAIN);
+                setcookie('msgwpl_refresh_token_' . $this->config['cookie_hash'], null, time()-300, COOKIEPATH, COOKIE_DOMAIN);
 
                 // Microsoft logout url
                 $msg_logout = 'https://login.microsoftonline.com/' . $this->config['tennent_id'] . '/oauth2/logout?post_logout_redirect_uri=' . get_bloginfo('url');
