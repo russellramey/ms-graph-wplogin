@@ -56,15 +56,16 @@ class MSGWPLAuthUser
         // Check for Client Secret
         if(defined('MSGWPL_CLIENT_SECRET')){
             $this->config['client_secret'] = MSGWPL_CLIENT_SECRET;
+            $this->config['cookie_hash'] = hash('sha256', MSGWPL_CLIENT_SECRET . COOKIE_DOMAIN);
         }
         // Check for Graph Scopes
         if(defined('MSGWPL_CLIENT_SCOPES')){
             $this->config['scopes'] = MSGWPL_CLIENT_SCOPES;
         }
-        // Check for Wordpress salt, generate hash string
-        if(defined('SECURE_AUTH_SALT')){
-            $this->config['cookie_hash'] = hash('sha256', SECURE_AUTH_SALT . get_bloginfo('url'));
-        }
+        // // Check for Wordpress salt, generate hash string
+        // if(defined('SECURE_AUTH_SALT')){
+        //     $this->config['cookie_hash'] = hash('sha256', SECURE_AUTH_SALT . get_bloginfo('url'));
+        // }
 
         // Check each value in $config array
         foreach($this->config as $key => $value){
@@ -283,8 +284,8 @@ class MSGWPLAuthUser
         // Set MSGWPL access and refresh tokens as COOKIES
         // COOKIEPATH & COOKIE_DOMAIN are default Wordpress constants
         if(isset($data->access_token) && isset($data->refresh_token)){
-            setcookie('msgwpl_access_token_' . $this->config['cookie_hash'], $data->access_token, time() + 3600, COOKIEPATH, COOKIE_DOMAIN, true, true); // Expire 1 Hour
-            setcookie('msgwpl_refresh_token_' . $this->config['cookie_hash'], $data->refresh_token, time() + 259200, COOKIEPATH, COOKIE_DOMAIN, true, true); // Expire 3 Days
+            setcookie('msgwpl_access_token_' . $this->config['cookie_hash'], $data->access_token, time() + 3600, '/', COOKIE_DOMAIN, true, true); // Expire 1 Hour
+            setcookie('msgwpl_refresh_token_' . $this->config['cookie_hash'], $data->refresh_token, time() + 259200, '/', COOKIE_DOMAIN, true, true); // Expire 3 Days
         }
 
         // Return response data
@@ -388,8 +389,8 @@ class MSGWPLAuthUser
 
                 // Clear MSGWPL cookies
                 // COOKIEPATH & COOKIE_DOMAIN are default Wordpress constants
-                setcookie('msgwpl_access_token_' . $this->config['cookie_hash'], null, time()-300, COOKIEPATH, COOKIE_DOMAIN);
-                setcookie('msgwpl_refresh_token_' . $this->config['cookie_hash'], null, time()-300, COOKIEPATH, COOKIE_DOMAIN);
+                setcookie('msgwpl_access_token_' . $this->config['cookie_hash'], null, time()-300, '/', COOKIE_DOMAIN);
+                setcookie('msgwpl_refresh_token_' . $this->config['cookie_hash'], null, time()-300, '/', COOKIE_DOMAIN);
 
                 // Microsoft logout url
                 $msg_logout = 'https://login.microsoftonline.com/' . $this->config['tennent_id'] . '/oauth2/logout?post_logout_redirect_uri=' . get_bloginfo('url');
