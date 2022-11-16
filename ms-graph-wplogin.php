@@ -63,7 +63,11 @@ class MSGWPLAuthUser
         }
         // Check for config secret, generate hash string
         if(isset($this->config['client_secret'])){
-            $this->config['cookie_hash'] = hash('sha256', $this->config['client_secret'] . (isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : 'MSGWPL'));
+            // Parse wordpress site url
+            $wp_url = get_bloginfo('url');
+            $wp_url = parse_url($wp_url);
+            // Set cookie_hash
+            $this->config['cookie_hash'] = hash('sha256', $this->config['client_secret'] . (isset($wp_url['host']) ? $wp_url['host'] : 'MSGWPL'));
         }
 
         // Check each value in $config array
