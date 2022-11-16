@@ -56,16 +56,15 @@ class MSGWPLAuthUser
         // Check for Client Secret
         if(defined('MSGWPL_CLIENT_SECRET')){
             $this->config['client_secret'] = MSGWPL_CLIENT_SECRET;
-            $this->config['cookie_hash'] = hash('sha256', MSGWPL_CLIENT_SECRET . COOKIE_DOMAIN);
         }
         // Check for Graph Scopes
         if(defined('MSGWPL_CLIENT_SCOPES')){
             $this->config['scopes'] = MSGWPL_CLIENT_SCOPES;
         }
-        // // Check for Wordpress salt, generate hash string
-        // if(defined('SECURE_AUTH_SALT')){
-        //     $this->config['cookie_hash'] = hash('sha256', SECURE_AUTH_SALT . get_bloginfo('url'));
-        // }
+        // Check for config secret, generate hash string
+        if(isset($this->config['client_secret'])){
+            $this->config['cookie_hash'] = hash('sha256', $this->config['client_secret'] . (isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : 'MSGWPL'));
+        }
 
         // Check each value in $config array
         foreach($this->config as $key => $value){
